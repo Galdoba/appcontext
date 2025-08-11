@@ -1,6 +1,6 @@
 module github.com/Galdoba/appcontext
 
-go 1.24.4
+go 1.21.1
 
 require (
 	github.com/Galdoba/gogacon v0.0.0-20250626101603-f2917be71ee3
