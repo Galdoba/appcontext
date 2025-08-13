@@ -133,7 +133,7 @@ func (p *ProgramPaths) BackupsDir() string {
 
 // ConfigFile - возвращат стандартный путь конфига
 func (p *ProgramPaths) ConfigFile() string {
-	return filepath.Join(p.ConfigDir(), p.programName+".conf")
+	return filepath.Join(p.ConfigDir(), p.programName+".toml")
 }
 
 // LogFile  - возвращает стандартный путь логфайла
