@@ -29,7 +29,7 @@ func (l *Logger) log(level LogLevel, msg string, args ...any) {
 				continue
 			}
 			defer f.Close()
-			if _, err := f.Write([]byte(msg)); err != nil {
+			if _, err := f.Write([]byte(msg + "\n")); err != nil {
 				continue
 			}
 		}
