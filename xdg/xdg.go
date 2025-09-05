@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 )
 
+const (
+	LibVersion = "1.0.0"
+)
+
 type ProgramPaths struct {
 	programName string
 }

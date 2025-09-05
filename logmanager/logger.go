@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+const (
+	LibVersion = "1.0.0"
+)
+
 type LogLevel int
 
 const (
