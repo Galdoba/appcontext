@@ -152,6 +152,9 @@ func (db *JsonDB[T]) save() error {
 
 	// Write to a temporary file first to ensure atomicity
 	tmpPath := db.path + ".tmp"
+	if _, err := os.Create(tmpPath); err != nil {
+		return fmt.Errorf("failed to create temp file: %v", err)
+	}
 	if err := os.WriteFile(tmpPath, buf.Bytes(), 0644); err != nil {
 		return fmt.Errorf("failed to write temp file: %v", err)
 	}
