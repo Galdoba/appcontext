@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	LibVersion = "1.0.0"
+	LibVersion = "1.0."
 )
 
 // Manager handles application configuration lifecycle using TOML format.
