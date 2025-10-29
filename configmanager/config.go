@@ -16,7 +16,7 @@ import (
 
 // Library version constant
 const (
-	LibVersion = "0.2.0"
+	LibVersion = "0.2.1"
 )
 
 // SerializationFormat represents supported configuration file formats
@@ -294,6 +294,17 @@ func atomicSave(data []byte, path string) error {
 	}
 	if err := os.Rename(tempPath, path); err != nil {
 		return fmt.Errorf("failed to seal saved data to file: %v", err)
+	}
+	return nil
+}
+
+// SetPath sets new path for config file
+func (m *Manager[T]) SetPath(newPath string) error {
+	if !fileExists(newPath) {
+		return fmt.Errorf("new path must exist")
+	}
+	if err := validatePath(newPath); err != nil {
+		return fmt.Errorf("failed to set new path: %v", err)
 	}
 	return nil
 }
