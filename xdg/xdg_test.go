@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Galdoba/appcontext/xdg/v2"
+	"github.com/Galdoba/appcontext/xdg"
 )
 
 var testAppName = "myapp"

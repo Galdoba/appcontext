@@ -76,8 +76,7 @@ func New[T any](appName string, defaultConfig T, options ...ManagerOption) (*Man
 
 	switch mo.forceAlternativePath {
 	case "":
-		xdgPath := filepath.Join(xdg.New(appName).ConfigDir(), "config."+string(m.format))
-		m.path = xdgPath
+		m.path = xdg.Location(xdg.ForConfig(), xdg.WithProgramName(appName), xdg.WithFileName(fmt.Sprintf("config.%v", m.format)))
 	default:
 		if fileExists(mo.forceAlternativePath) {
 			if err := validatePath(mo.forceAlternativePath); err != nil {

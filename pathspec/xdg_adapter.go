@@ -1,7 +1,7 @@
 package pathspec
 
 import (
-	"github.com/Galdoba/appcontext/xdg/v2"
+	"github.com/Galdoba/appcontext/xdg"
 )
 
 // xdgAdapter adapts xdg package options to PathOptions

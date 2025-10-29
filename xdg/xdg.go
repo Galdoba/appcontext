@@ -4,45 +4,184 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
+// LibVersion represents the current version of the XDG library.
 const (
 	LibVersion = "1.0.0"
 )
 
-type ProgramPaths struct {
-	programName string
+// PathOption defines a function type that modifies path configuration.
+type PathOption func(*pathConfig)
+
+// pathConfig holds the configuration for building application paths.
+type pathConfig struct {
+	programName  string   // Name of the application
+	projectGroup string   // Optional group/organization name
+	baseDir      string   // Base directory type (config, data, cache, state)
+	subDir       []string // Additional subdirectories
+	fileName     string   // Optional filename
 }
 
-func New(programName string) *ProgramPaths {
-	return &ProgramPaths{programName: programName}
+// Location constructs a full path based on XDG Base Directory specification
+// and the provided configuration options. Returns an empty string if required
+// parameters are missing or invalid. If filename is not set path will be ended
+// with separator to mark it as a directory.
+func Location(opts ...PathOption) string {
+	config := &pathConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	if config.programName == "" {
+		return ""
+	}
+
+	basePath := getBaseDir(config.baseDir)
+	if basePath == "" {
+		return ""
+	}
+
+	path := basePath
+	if config.projectGroup != "" {
+		path = filepath.Join(path, config.projectGroup)
+	}
+	path = filepath.Join(path, config.programName)
+
+	if len(config.subDir) != 0 {
+		sections := append([]string{path}, config.subDir...)
+		path = filepath.Join(sections...)
+	}
+
+	switch config.fileName {
+	case "":
+		fn := "tmpName"
+		path = filepath.Join(path, fn)
+		path = strings.TrimSuffix(path, "tmpName")
+	default:
+		path = filepath.Join(path, config.fileName)
+	}
+	if config.fileName != "" {
+	}
+
+	return path
 }
 
-// Базовые функции для получения корневых директорий XDG
+// WithProgramName sets the application name for the path configuration.
+func WithProgramName(name string) PathOption {
+	return func(pc *pathConfig) {
+		pc.programName = name
+	}
+}
 
-func (p *ProgramPaths) configHome() string {
+// WithProjectGroup sets the project group/organization for the path configuration.
+func WithProjectGroup(group string) PathOption {
+	return func(pc *pathConfig) {
+		pc.projectGroup = group
+	}
+}
+
+// WithBaseDir sets the base directory type for the path configuration.
+func WithBaseDir(dirType string) PathOption {
+	return func(pc *pathConfig) {
+		pc.baseDir = dirType
+	}
+}
+
+// WithSubDir sets additional subdirectories for the path configuration.
+func WithSubDir(subDir []string) PathOption {
+	return func(pc *pathConfig) {
+		pc.subDir = subDir
+	}
+}
+
+// WithFileName sets the filename for the path configuration.
+func WithFileName(fileName string) PathOption {
+	return func(pc *pathConfig) {
+		pc.fileName = fileName
+	}
+}
+
+// ForConfig returns a PathOption that sets the base directory to config.
+func ForConfig() PathOption {
+	return WithBaseDir("config")
+}
+
+// ForData returns a PathOption that sets the base directory to data.
+func ForData() PathOption {
+	return WithBaseDir("data")
+}
+
+// ForCache returns a PathOption that sets the base directory to cache.
+func ForCache() PathOption {
+	return WithBaseDir("cache")
+}
+
+// ForState returns a PathOption that sets the base directory to state.
+func ForState() PathOption {
+	return WithBaseDir("state")
+}
+
+// ForRuntime returns a PathOption that sets the base directory to runtime.
+func ForRuntime() PathOption {
+	return WithBaseDir("runtime")
+}
+
+// ForTemp returns a PathOption that sets the base directory to temp.
+func ForTemp() PathOption {
+	return WithBaseDir("temp")
+}
+
+// runtimeHome returns the path to the runtime directory.
+func runtimeHome() string {
+	if path := os.Getenv("XDG_RUNTIME_DIR"); path != "" {
+		return path
+	}
+	return filepath.Join(home(), ".local", "run")
+}
+
+// getBaseDir returns the appropriate base directory path based on directory type.
+func getBaseDir(dirType string) string {
+	switch dirType {
+	case "config":
+		return configHome()
+	case "data":
+		return dataHome()
+	case "cache":
+		return cacheHome()
+	case "state":
+		return stateHome()
+	case "runtime":
+		return runtimeHome()
+	case "temp":
+		return tempHome()
+	default:
+		return ""
+	}
+}
+
+// configHome returns the path to the config home directory.
+func configHome() string {
 	return filepath.Join(home(), ".config")
 }
 
-func (p *ProgramPaths) dataHome() string {
+// dataHome returns the path to the data home directory.
+func dataHome() string {
 	return filepath.Join(home(), ".local", "share")
 }
 
-func (p *ProgramPaths) cacheHome() string {
+// cacheHome returns the path to the cache home directory.
+func cacheHome() string {
 	return filepath.Join(home(), ".cache")
 }
 
-func (p *ProgramPaths) stateHome() string {
+// stateHome returns the path to the state home directory.
+func stateHome() string {
 	return filepath.Join(home(), ".local", "state")
 }
 
-// func (p *ProgramPaths) runtimeDir() string {
-// 	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-// 		return dir
-// 	}
-// 	return filepath.Join("/run/user", strconv.Itoa(os.Getuid()))
-// }
-
+// home returns the user's home directory.
 func home() string {
 	h, err := os.UserHomeDir()
 	if err != nil {
@@ -51,96 +190,7 @@ func home() string {
 	return h
 }
 
-// Основные пути приложения
-
-// ConfigDir возвращает путь к директории конфигурации
-// Пример: /home/user/.config/myapp
-func (p *ProgramPaths) ConfigDir() string {
-	return filepath.Join(p.configHome(), p.programName)
-}
-
-// LogDir возвращает путь к директории логов
-// Пример: /home/user/.local/state/myapp/log
-func (p *ProgramPaths) LogDir() string {
-	return filepath.Join(p.stateHome(), p.programName, "log")
-}
-
-// CacheDir возвращает путь к операционному кэшу
-// Пример: /home/user/.cache/myapp
-func (p *ProgramPaths) CacheDir() string {
-	return filepath.Join(p.cacheHome(), p.programName)
-}
-
-// UserProfilesDir возвращает путь к профилям пользователей
-// Пример: /home/user/.local/share/myapp/profiles
-func (p *ProgramPaths) UserProfilesDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "profiles")
-}
-
-// PersistentDataDir возвращает путь к файлам длительного хранения
-// Пример: /home/user/.local/share/myapp/data
-func (p *ProgramPaths) PersistentDataDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "data")
-}
-
-// InboxDir возвращает путь к входящим файлам для обмена
-// Пример: /home/user/.local/share/myapp/inbox
-func (p *ProgramPaths) InboxDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "inbox")
-}
-
-// OutboxDir возвращает путь к исходящим файлам для обмена
-// Пример: /home/user/.local/share/myapp/outbox
-func (p *ProgramPaths) OutboxDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "outbox")
-}
-
-// Дополнительные пути
-
-// StateDir возвращает общую директорию состояния программы
-// Пример: /home/user/.local/state/myapp
-func (p *ProgramPaths) StateDir() string {
-	return filepath.Join(p.stateHome(), p.programName)
-}
-
-// PluginsDir возвращает путь к плагинам
-// Пример: /home/user/.local/share/myapp/plugins
-func (p *ProgramPaths) PluginsDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "plugins")
-}
-
-// ThemesDir возвращает путь к темам оформления
-// Пример: /home/user/.local/share/myapp/themes
-func (p *ProgramPaths) ThemesDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "themes")
-}
-
-// BinDir возвращает путь к исполняемым файлам программы
-// Пример: /home/user/.local/share/myapp/bin
-func (p *ProgramPaths) BinDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "bin")
-}
-
-// BackupsDir возвращает путь к бэкапам
-// Пример: /home/user/.local/share/myapp/backups
-func (p *ProgramPaths) BackupsDir() string {
-	return filepath.Join(p.dataHome(), p.programName, "backups")
-}
-
-// RuntimeDir возвращает путь для временных файлов сессии
-// Пример: /run/user/1000/myapp
-// func (p *ProgramPaths) RuntimeDir() string {
-// 	return filepath.Join(p.runtimeDir(), p.programName)
-// }
-
-//стандартные пути к файлам
-
-// ConfigFile - возвращат стандартный путь конфига
-func (p *ProgramPaths) ConfigFile() string {
-	return filepath.Join(p.ConfigDir(), p.programName+".toml")
-}
-
-// LogFile  - возвращает стандартный путь логфайла
-func (p *ProgramPaths) LogFile() string {
-	return filepath.Join(p.LogDir(), p.programName+".log")
+// tempHome returns the path to the temp directory.
+func tempHome() string {
+	return os.TempDir()
 }
