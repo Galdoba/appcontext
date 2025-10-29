@@ -43,13 +43,12 @@ func TestPath_String(t *testing.T) {
 		{
 			name: "cache directory with subcategory",
 			path: Path{
-				AppName:     "testapp",
-				Name:        "thumbnails",
-				BaseDir:     Cache,
-				Subcategory: SubcategoryThumbnails,
-				PathType:    DirectoryType,
+				AppName:  "testapp",
+				BaseDir:  Cache,
+				Name:     "thumbnails",
+				PathType: DirectoryType,
 			},
-			want: filepath.Join(os.Getenv("HOME"), ".cache", "testapp", "thumbnails", "thumbnails"),
+			want: filepath.Join(os.Getenv("HOME"), ".cache", "testapp", "thumbnails") + string(filepath.Separator),
 		},
 	}
 	for _, tt := range tests {

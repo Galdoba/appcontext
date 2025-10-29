@@ -3,57 +3,16 @@ package pathspec
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 const (
-	LibVersion = "1.0.0"
+	LibVersion = "1.1.0"
 )
 
 // String returns the absolute filesystem path for the Path
 // [ai generated commentary]
 func (p Path) String() string {
-	basePath := p.getBaseDirPath()
-	if p.Subcategory != "" {
-		return filepath.Join(basePath, p.AppName, string(p.Subcategory), p.Name)
-	}
-	return filepath.Join(basePath, p.AppName, p.Name)
-}
-
-// getBaseDirPath returns the base directory path based on XDG specifications
-// [ai generated commentary]
-func (p Path) getBaseDirPath() string {
-	switch p.BaseDir {
-	case Config:
-		if path := os.Getenv("XDG_CONFIG_HOME"); path != "" {
-			return path
-		}
-		return filepath.Join(os.Getenv("HOME"), ".config")
-	case Data:
-		if path := os.Getenv("XDG_DATA_HOME"); path != "" {
-			return path
-		}
-		return filepath.Join(os.Getenv("HOME"), ".local", "share")
-	case Cache:
-		if path := os.Getenv("XDG_CACHE_HOME"); path != "" {
-			return path
-		}
-		return filepath.Join(os.Getenv("HOME"), ".cache")
-	case Runtime:
-		if path := os.Getenv("XDG_STATE_HOME"); path != "" {
-			return path
-		}
-		return filepath.Join(os.Getenv("HOME"), ".local", "state")
-	case Temp:
-		if path := os.Getenv("XDG_RUNTIME_DIR"); path != "" {
-			return path
-		}
-		return filepath.Join("/tmp", p.AppName+"-"+strconv.Itoa(os.Getuid()))
-	default:
-		return "/tmp"
-	}
+	return BuildPath(p)
 }
 
 // isValid checks if a subcategory is valid for the given category

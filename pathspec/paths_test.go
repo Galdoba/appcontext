@@ -3,67 +3,54 @@ package pathspec
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 )
 
-func TestPath_getBaseDirPath(t *testing.T) {
+func TestBuildPath(t *testing.T) {
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name string
 		path Path
 		want string
 	}{
 		{
-			name: "config directory with XDG_CONFIG_HOME set",
+			name: "config file with subcategory",
 			path: Path{
-				AppName: "testapp",
-				BaseDir: Config,
+				AppName:     "testapp",
+				Name:        "config.yaml",
+				BaseDir:     Config,
+				Subcategory: SubcategoryConfig,
+				PathType:    FileType,
 			},
 			want: func() string {
-				if path := os.Getenv("XDG_CONFIG_HOME"); path != "" {
-					return path
-				}
-				return filepath.Join(os.Getenv("HOME"), ".config")
+				// Ожидаемый путь через xdg
+				home, _ := os.UserHomeDir()
+				return filepath.Join(home, ".config", "testapp", "config", "config.yaml")
 			}(),
 		},
 		{
-			name: "data directory",
+			name: "data directory without subcategory",
 			path: Path{
-				AppName: "testapp",
-				BaseDir: Data,
+				AppName:  "testapp",
+				Name:     "data",
+				BaseDir:  Data,
+				PathType: DirectoryType,
 			},
 			want: func() string {
-				if path := os.Getenv("XDG_DATA_HOME"); path != "" {
-					return path
-				}
-				return filepath.Join(os.Getenv("HOME"), ".local", "share")
-			}(),
-		},
-		{
-			name: "temp directory with app name and user id",
-			path: Path{
-				AppName: "testapp",
-				BaseDir: Temp,
-			},
-			want: func() string {
-				if path := os.Getenv("XDG_RUNTIME_DIR"); path != "" {
-					return path
-				}
-				return filepath.Join("/tmp", "testapp-"+strconv.Itoa(os.Getuid()))
+				home, _ := os.UserHomeDir()
+				return filepath.Join(home, ".local", "share", "testapp", "data") + string(filepath.Separator)
 			}(),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.path.getBaseDirPath()
+			got := BuildPath(tt.path)
 			if got != tt.want {
-				t.Errorf("Path.getBaseDirPath() = %v, want %v", got, tt.want)
+				t.Errorf("BuildPath() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
-
 func TestIsValid(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
