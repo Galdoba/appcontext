@@ -1,5 +1,7 @@
 package logmanager
 
+import "strings"
+
 func (l *Logger) Tracef(msg string, args ...interface{}) {
 	l.log(LevelTrace, msg, args...)
 }
@@ -71,12 +73,23 @@ func ListLevels() ([]LogLevel, []string) {
 	return lvls, asString
 }
 
+// func StringToLevel(s string) LogLevel {
+// 	l := LevelInfo
+// 	for newL, str := range levelNames {
+// 		if str == s {
+// 			return newL
+// 		}
+// 	}
+// 	return l
+// }
+
 func StringToLevel(s string) LogLevel {
-	l := LevelInfo
-	for newL, str := range levelNames {
-		if str == s {
-			return newL
+	s = strings.ToLower(s)
+	levels, strngs := ListLevels()
+	for i, level := range levels {
+		if strings.HasPrefix(strngs[i], s) {
+			return level
 		}
 	}
-	return l
+	return LevelInfo
 }

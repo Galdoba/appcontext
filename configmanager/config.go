@@ -44,7 +44,6 @@ type Manager[T any] struct {
 // managerOptions holds configuration options for the Manager
 type managerOptions struct {
 	forceAlternativePath string
-	skipSaveOnCreation   bool
 	format               SerializationFormat
 }
 
@@ -63,21 +62,23 @@ func New[T any](appName string, defaultConfig T, options ...ManagerOption) (*Man
 	}
 	mo := managerOptions{
 		forceAlternativePath: "",
-		skipSaveOnCreation:   false,
 		format:               TOML,
 	}
 	for _, modify := range options {
 		modify(&mo)
 	}
+
 	if err := validateFormat(mo.format); err != nil {
 		return nil, err
 	}
-	m.format = mo.format
 
 	switch mo.forceAlternativePath {
 	case "":
 		m.path = xdg.Location(xdg.ForConfig(), xdg.WithProgramName(appName), xdg.WithFileName(fmt.Sprintf("config.%v", m.format)))
 	default:
+		if err := validatePathFormatConsistency(mo.forceAlternativePath, m.format); err != nil {
+			return nil, err
+		}
 		if fileExists(mo.forceAlternativePath) {
 			if err := validatePath(mo.forceAlternativePath); err != nil {
 				return nil, fmt.Errorf("forced path invalid: %v", err)
@@ -86,13 +87,6 @@ func New[T any](appName string, defaultConfig T, options ...ManagerOption) (*Man
 		m.path = mo.forceAlternativePath
 	}
 
-	switch mo.skipSaveOnCreation {
-	case false:
-		if err := m.ensureConfigFileExist(); err != nil {
-			return nil, err
-		}
-	case true:
-	}
 	return m, nil
 }
 
@@ -100,13 +94,6 @@ func New[T any](appName string, defaultConfig T, options ...ManagerOption) (*Man
 func ForcePath(path string) ManagerOption {
 	return func(mo *managerOptions) {
 		mo.forceAlternativePath = path
-	}
-}
-
-// SkipSaveOnCreation option controls whether to skip saving the config file on creation
-func SkipSaveOnCreation(skipSave bool) ManagerOption {
-	return func(mo *managerOptions) {
-		mo.skipSaveOnCreation = skipSave
 	}
 }
 
@@ -118,42 +105,29 @@ func WithSerializationFormat(format SerializationFormat) ManagerOption {
 }
 
 // Load reads and parses the configuration file from disk
-func (m *Manager[T]) Load(alternativePaths ...string) error {
+func (m *Manager[T]) Load() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	searchInPaths := append([]string{m.path}, alternativePaths...)
-	selectedPath := ""
-	for _, path := range searchInPaths {
-		if err := validatePath(path); err != nil {
-			continue
-		}
-		selectedPath = path
-		break
+	if m.path == "" {
+		return fmt.Errorf("filepath is not set")
 	}
-	if selectedPath == "" {
-		return fmt.Errorf("could not find valid config paths in: %v", searchInPaths)
-	}
-	if ext := strings.TrimSuffix(filepath.Ext(selectedPath), "."); ext != string(m.format) {
+	if ext := strings.TrimSuffix(filepath.Ext(m.path), "."); ext != string(m.format) {
 		return fmt.Errorf("file is extention does not match serialization format (%v; %v)", ext, m.format)
 	}
-	data, err := os.ReadFile(selectedPath)
+	data, err := os.ReadFile(m.path)
 	if err != nil {
 		return fmt.Errorf("failed to read selected file: %v", err)
 	}
 
-	old := m.Config()
 	if err := m.unmarshal(data); err != nil {
-		m.config = &old
 		return err
 	}
 
 	if v, ok := any(m.config).(Validator); ok {
 		if err := v.Validate(); err != nil {
-			m.config = &old
 			return fmt.Errorf("config validation failed: %w", err)
 		}
 	}
-	m.path = selectedPath
 	return nil
 }
 
@@ -184,29 +158,21 @@ func (m *Manager[T]) Save() error {
 
 // Config returns the current configuration
 func (m *Manager[T]) Config() T {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return *m.config
 }
 
 // Path returns the file path used for configuration storage
 func (m *Manager[T]) Path() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.path
 }
 
 // Error implements the error interface for ErrUnsupportedFormat
 func (err *ErrUnsupportedFormat) Error() string {
 	return fmt.Sprintf("unsupported serialization format: '%v'", err.format)
-}
-
-// ensureConfigFileExist creates the configuration file if it doesn't exist
-func (m *Manager[T]) ensureConfigFileExist() error {
-	if _, err := os.Stat(m.path); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			if err := m.Save(); err != nil {
-				return fmt.Errorf("failed to save file on first start: %v", err)
-			}
-		}
-	}
-	return nil
 }
 
 // unmarshal deserializes data based on the configured format
@@ -252,11 +218,11 @@ func validatePath(filePath string) error {
 	if filePath == "" {
 		return fmt.Errorf("path is empty")
 	}
+	if !fileExists(filePath) {
+		return nil
+	}
 	info, err := os.Stat(filePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return errors.New("path does not exist")
-		}
 		return err
 	}
 
@@ -266,10 +232,7 @@ func validatePath(filePath string) error {
 
 	file, err := os.OpenFile(filePath, os.O_RDONLY, 0666)
 	if err != nil {
-		if os.IsPermission(err) {
-			return errors.New("file permission does not allow read")
-		}
-		return err
+		return fmt.Errorf("failed to open file: %v", err)
 	}
 	defer file.Close()
 
@@ -292,18 +255,38 @@ func atomicSave(data []byte, path string) error {
 		return fmt.Errorf("failed to save to tmp file: %v", err)
 	}
 	if err := os.Rename(tempPath, path); err != nil {
+		os.Remove(tempPath)
 		return fmt.Errorf("failed to seal saved data to file: %v", err)
 	}
 	return nil
 }
 
+func validatePathFormatConsistency(path string, format SerializationFormat) error {
+	switch format {
+	case JSON:
+		if strings.HasSuffix(path, "json") {
+			return nil
+		}
+	case YAML:
+		if strings.HasSuffix(path, "yaml") {
+			return nil
+		}
+	case TOML:
+		if strings.HasSuffix(path, "toml") {
+			return nil
+		}
+	}
+	return fmt.Errorf("path does not match with format")
+}
+
 // SetPath sets new path for config file
 func (m *Manager[T]) SetPath(newPath string) error {
-	if !fileExists(newPath) {
-		return fmt.Errorf("new path must exist")
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if err := validatePathFormatConsistency(newPath, m.format); err != nil {
+		return err
 	}
-	if err := validatePath(newPath); err != nil {
-		return fmt.Errorf("failed to set new path: %v", err)
-	}
+	m.path = newPath
 	return nil
 }
