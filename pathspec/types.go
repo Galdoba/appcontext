@@ -66,7 +66,7 @@ const (
 	SubcategoryLogs PathSubcategory = "logs"
 	// Log files subcategory
 	// [ai generated commentary]
-	SubcategoryConfig PathSubcategory = "config"
+	SubcategoryConfig PathSubcategory = ""
 	// Configuration files subcategory
 	// [ai generated commentary]
 	SubcategoryTemplates PathSubcategory = "templates"
@@ -179,8 +179,11 @@ type Path struct {
 	BaseDir BaseDirType `json:"base_dir"`
 	// Base directory type according to XDG
 	// [ai generated commentary]
+	Groupcategory string `json:"groupcategory,omitempty"`
+	// Groupcategory - upper level category for detailed path organization
+	// [ai generated commentary]
 	Subcategory PathSubcategory `json:"subcategory,omitempty"`
-	// Subcategory for detailed path organization
+	// Subcategory - lower level category for detailed path organization
 	// [ai generated commentary]
 	PathType PathType `json:"path_type"`
 	// Type of filesystem object

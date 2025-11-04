@@ -6,21 +6,23 @@ import (
 
 // xdgAdapter adapts xdg package options to PathOptions
 type xdgAdapter struct {
-	appName      string
-	projectGroup string
-	baseDir      BaseDirType
-	subcategory  PathSubcategory
-	name         string
-	pathType     PathType
+	appName       string
+	projectGroup  string
+	baseDir       BaseDirType
+	groupcategory string
+	subcategory   PathSubcategory
+	name          string
+	pathType      PathType
 }
 
 func newXDGAdapter(path Path) *xdgAdapter {
 	return &xdgAdapter{
-		appName:     path.AppName,
-		baseDir:     path.BaseDir,
-		subcategory: path.Subcategory,
-		name:        path.Name,
-		pathType:    path.PathType,
+		appName:       path.AppName,
+		baseDir:       path.BaseDir,
+		groupcategory: path.Groupcategory,
+		subcategory:   path.Subcategory,
+		name:          path.Name,
+		pathType:      path.PathType,
 	}
 }
 
@@ -28,6 +30,10 @@ func (a *xdgAdapter) toXDGOptions() []xdg.PathOption {
 	var opts []xdg.PathOption
 
 	opts = append(opts, a.baseDirToXDOption())
+
+	if a.groupcategory != "" {
+		opts = append(opts, xdg.WithProjectGroup(a.groupcategory))
+	}
 
 	if a.appName != "" {
 		opts = append(opts, xdg.WithProgramName(a.appName))
