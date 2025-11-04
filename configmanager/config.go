@@ -71,6 +71,7 @@ func New[T any](appName string, defaultConfig T, options ...ManagerOption) (*Man
 	if err := validateFormat(mo.format); err != nil {
 		return nil, err
 	}
+	m.format = mo.format
 
 	switch mo.forceAlternativePath {
 	case "":
