@@ -111,7 +111,7 @@ func (m *Manager[T]) Load() error {
 	if m.path == "" {
 		return fmt.Errorf("filepath is not set")
 	}
-	if ext := strings.TrimSuffix(filepath.Ext(m.path), "."); ext != string(m.format) {
+	if ext := strings.TrimPrefix(filepath.Ext(m.path), "."); ext != string(m.format) {
 		return fmt.Errorf("file is extention does not match serialization format (%v; %v)", ext, m.format)
 	}
 	data, err := os.ReadFile(m.path)
