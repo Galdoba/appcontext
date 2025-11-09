@@ -9,7 +9,6 @@ import (
 )
 
 // NewLayout creates a new Layout with the given app name and paths
-// [ai generated commentary]
 func NewLayout(appname string, paths []Path) (*Layout, error) {
 	layout := &Layout{
 		AppName:      appname,
@@ -48,7 +47,6 @@ func NewLayout(appname string, paths []Path) (*Layout, error) {
 }
 
 // Import loads a Layout from a JSON file and validates all paths
-// [ai generated commentary]
 func Import(filePath string) (*Layout, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -79,7 +77,6 @@ func Import(filePath string) (*Layout, error) {
 }
 
 // GetAllPaths returns all paths combined from all categories
-// [ai generated commentary]
 func (l *Layout) GetAllPaths() []Path {
 	var allPaths []Path
 	allPaths = append(allPaths, l.ConfigPaths...)
@@ -91,7 +88,6 @@ func (l *Layout) GetAllPaths() []Path {
 }
 
 // Generate creates all directories and empty files in the layout
-// [ai generated commentary]
 func (l *Layout) Generate() error {
 	var errors []string
 	allPaths := l.GetAllPaths()
@@ -135,7 +131,6 @@ func (l *Layout) Generate() error {
 }
 
 // Assess evaluates real files against layout parameters and returns assessment results
-// [ai generated commentary]
 func (l *Layout) Assess() ([]string, error) {
 	var assessmentErrors []string
 	allPaths := l.GetAllPaths()
@@ -203,7 +198,6 @@ func (l *Layout) Assess() ([]string, error) {
 }
 
 // getActualType returns string representation of actual filesystem object type
-// [ai generated commentary]
 func getActualType(info os.FileInfo) string {
 	if info.IsDir() {
 		return "directory"
@@ -212,7 +206,6 @@ func getActualType(info os.FileInfo) string {
 }
 
 // getExpectedType returns string representation of expected Path type
-// [ai generated commentary]
 func getExpectedType(pathType PathType) string {
 	switch pathType {
 	case FileType:
