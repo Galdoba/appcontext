@@ -106,7 +106,7 @@ func (l *Layout) Generate() error {
 			}
 		case FileType:
 			parentDir := filepath.Dir(fullPath)
-			if err := os.MkdirAll(parentDir, 0755); err != nil {
+			if err := os.MkdirAll(parentDir, 0777); err != nil {
 				errors = append(errors, fmt.Sprintf("parent directory for %s: %v", fullPath, err))
 				continue
 			}
@@ -158,7 +158,7 @@ func (l *Layout) Assess() ([]string, error) {
 			continue
 		}
 
-		// Check permissions
+		// Check permissions: TODO: windows/linux cross compartability
 		actualPerm := info.Mode().Perm()
 		expectedPerm := os.FileMode(path.DefaultPerm)
 		if actualPerm == 0000 {
